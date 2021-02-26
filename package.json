@@ -1,0 +1,25 @@
+{
+  "name": "redux-kangking",
+  "version": "0.1.0",
+  "description": "",
+  "main": "dist/index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "redux",
+    "reducer",
+    "state",
+    "predictable",
+    "functional",
+    "immutable",
+    "hot",
+    "live",
+    "replay",
+    "flux",
+    "elm",
+    "king"
+  ],
+  "author": "kangking",
+  "license": "MIT"
+}
