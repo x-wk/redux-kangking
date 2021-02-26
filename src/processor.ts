@@ -1,8 +1,8 @@
 import produce from 'immer';
-import {AnyAction} from 'redux';
+import {AnyAction, Reducer} from 'redux';
 
 // 数字前导0
-function preZeroFill(num: number, size = 5): string {
+function padLeft(num: number, size = 5): string {
    if (num >= Math.pow(10, size)) {
       return num.toString();
    }
@@ -29,7 +29,9 @@ interface ReduxActionCreator<T> {
 abstract class ReduxStateHandler<S, D, T> {
 
    /**
-    * 从应用状态中获取指定 "部分" 状态(注: 勿返回默认值, 否则请根据情况重写 initialized 方法)
+    * 从应用状态中获取指定 "部分" 状态(注: )
+    *    1. 勿返回默认值, 否则请根据情况重写 initialized 方法
+    *    2. 若返回多个 "部分" 的状态, 其中一些可能已初始化, 请根据情况重写 initialized 方法
     * @param appState 应用状态
     */
    abstract getSliceState(appState: S): D | undefined;
@@ -60,6 +62,25 @@ abstract class ReduxStateHandler<S, D, T> {
 
 }
 
+interface ReduxStateProcessorManager<S> {
+   /**
+    * 添加处状态理器
+    */
+   addProcessor(...processors: Array<ReduxStateProcessor<S, any>>): void;
+
+   /**
+    * 返回第一个状态处理器
+    */
+   getProcessor(): ReduxStateProcessor<S, any>;
+}
+
+/**
+ * 更多特性有待完善:
+ *    1. 按需加载
+ *    2. 状态快照
+ *    3. 按调用频次动态排序
+ *    4. ...
+ */
 export abstract class ReduxStateProcessor<S, D, T = D> extends ReduxStateHandler<S, D, T> implements ReduxActionCreator<T> {
 
    private static _cnt = 0;
@@ -70,13 +91,13 @@ export abstract class ReduxStateProcessor<S, D, T = D> extends ReduxStateHandler
    constructor() {
       super();
       this._initOrder = ReduxStateProcessor._cnt++;
-      this._actionName = this.getActionName() || `@@ACTION#${preZeroFill(this._initOrder)}`;
+      this._actionName = this.getActionName() || `@@ACT#${padLeft(this._initOrder)}`;
    }
 
    /**
     * @param {any} processor
     */
-   set next(processor: ReduxStateProcessor<S, any>) {
+   private set next(processor: ReduxStateProcessor<S, any>) {
       this._next = processor;
    }
 
@@ -84,7 +105,7 @@ export abstract class ReduxStateProcessor<S, D, T = D> extends ReduxStateHandler
     * 默认操作类型是一个随机字符串
     * 子类覆盖此方法可以提供一个更有意义的名称
     */
-   protected getActionName(): string {
+   getActionName(): string {
       return this._actionName;
    }
 
@@ -111,7 +132,7 @@ export abstract class ReduxStateProcessor<S, D, T = D> extends ReduxStateHandler
       // 执行状态变更
       const {type, actionData} = action;
       if (this.isSupport(type)) {
-         return produce(appState, (draftState: S) => {
+         return produce(initializedState, (draftState: S) => {
             this.handleState(draftState, actionData);
          });
       }
@@ -121,14 +142,39 @@ export abstract class ReduxStateProcessor<S, D, T = D> extends ReduxStateHandler
          return this._next.process(initializedState, action);
       }
 
-      // 初始化处理器兜底, 否则提示错误
+      // AppStateManager兜底, 否则提示错误
       throw new Error('未配置应用状态处理器[AppStateProcessor]');
    }
 
    /**
-    * 兜底, 返回应用状态(all)
+    * APP状态管理器
     */
-   static AppStateProcessor = class AppStateProcessor<S> extends ReduxStateProcessor<S, any> {
+   static AppStateManager = class AppStateManager<S> extends ReduxStateProcessor<S, any> implements ReduxStateProcessorManager<S> {
+      private _first: ReduxStateProcessor<S, any> = this;
+      private _processors: Array<ReduxStateProcessor<S, any>> = [];
+
+      /**
+       * 添加处理器(遗憾没有依赖注入...)
+       * @param processors
+       */
+      addProcessor(...processors: Array<ReduxStateProcessor<S, any>>): void {
+         // actionName相同的去重
+         const actionNames = this._processors.map(p => p.getActionName());
+         const newProcessors = processors.filter(p => p && actionNames.indexOf(p.getActionName()) < 0);
+
+         // 构造链
+         if (newProcessors && newProcessors.length > 0) {
+            this._processors.push(...newProcessors);
+            newProcessors.forEach(p => {
+               p.next = this._first;
+               this._first = p;
+            });
+         }
+      }
+
+      getProcessor(): ReduxStateProcessor<S, any> {
+         return this._first;
+      }
 
       protected initialized(appState: S): boolean {
          return true;
@@ -151,3 +197,18 @@ export abstract class ReduxStateProcessor<S, D, T = D> extends ReduxStateHandler
       }
    };
 }
+
+// 用于创建reducer
+export function reducerCreator<S>(stateManager: ReduxStateProcessorManager<S>): Reducer<S> {
+   return (appState: S = {} as any, action: AnyAction) => {
+      return stateManager.getProcessor().process(appState, action);
+   };
+}
+
+// default app stateManager
+const appStateManager = new ReduxStateProcessor.AppStateManager<any>();
+
+// default app stateReducer
+export const appStateReducer = reducerCreator(appStateManager);
+
+export default appStateManager;
