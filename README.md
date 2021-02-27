@@ -2,7 +2,7 @@
 
 ***You don't need to write a reducer!***
 
-***you don't need to pay attention to Immutable!***
+***You don't need to pay attention to Immutable!***
 
 ***You don't even need to write an action!***
 
