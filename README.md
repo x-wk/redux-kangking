@@ -190,7 +190,7 @@ export default connect(
 )(Counter);
 ```
 
-[Complete Example](https://github.com/x-wk/redux-kangking)
+[Complete Example](https://github.com/x-wk/redux-kangking/tree/main/examples)
 
 ***Less is More, haha😊***
 
