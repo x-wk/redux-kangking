@@ -4,11 +4,12 @@
    "description": "Make Redux development easier",
    "main": "lib/index.js",
    "module": "esm/index.js",
-   "typings": "./index.d.ts",
-   "repository": "https://github.com/??????????????????????????????????????",
+   "typings": "src/index.ts",
+   "repository": "https://github.com/x-wk/redux-kangking",
+   "homepage": "https://github.com/x-wk/redux-kangking",
    "scripts": {
-      "build": "tsc && tsc -p tsconfig.esm.json",
       "clean": "rimraf lib esm",
+      "build": "tsc && tsc -p tsconfig.esm.json",
       "test": "echo \"Error: no test specified\" && exit 1"
    },
    "keywords": [
@@ -37,5 +38,6 @@
    "peerDependencies": {
       "immer": ">=7.x",
       "redux": ">=4.x"
-   }
+   },
+   "dependencies": {}
 }

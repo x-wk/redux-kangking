@@ -2,7 +2,7 @@
 .git
 .svn
 .npmrc
-src
+examples
 npm-debug.log
 tsconfig.json
 tsconfig.esm.json
