@@ -1,7 +1,9 @@
 import React, {Component} from 'react';
 import {NavLink, Redirect, Route, Switch} from 'react-router-dom';
-import Counter from './counter';
-import Tasks from './tasks';
+
+// Support lazy loading
+const Counter = React.lazy(() => import('./counter'));
+const Tasks = React.lazy(() => import('./tasks'));
 
 export class Home extends Component {
    render() {
@@ -14,11 +16,13 @@ export class Home extends Component {
                </div>
             </div>
             <div className="col-12 mt-3">
-               <Switch>
-                  <Route path="/home/counter" component={Counter}/>
-                  <Route path="/home/tasks" component={Tasks}/>
-                  <Redirect to="/home/counter"/>
-               </Switch>
+               <React.Suspense fallback={<h1>Loading...</h1>}>
+                  <Switch>
+                     <Route path="/home/counter" component={Counter}/>
+                     <Route path="/home/tasks" component={Tasks}/>
+                     <Redirect to="/home/counter"/>
+                  </Switch>
+               </React.Suspense>
             </div>
          </div>
       );

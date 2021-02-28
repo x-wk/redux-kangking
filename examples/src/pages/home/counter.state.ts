@@ -14,12 +14,6 @@ abstract class CounterProcessor extends ReduxStateProcessor<AppState, number> {
 }
 
 class IncrementProcessor extends CounterProcessor {
-
-   // 可以提供一个更有意义的actionType, 否则随机生成一个
-   getActionName() {
-      return 'increment';
-   }
-
    // 更新状态
    protected handleState(appState: AppState, prevState: number, actionData: number): void {
       appState.count = prevState + actionData;
@@ -43,7 +37,8 @@ export class IncrementAsyncProcessor extends IncrementProcessor {
    }
 }
 
-export const incrementProcessor = new IncrementProcessor();
+// 可以提供一个更有意义的actionType, 否则随机生成一个
+export const incrementProcessor = new IncrementProcessor("increment");
 export const decrementProcessor = new DecrementProcessor();
 export const incrementAsyncProcessor = new IncrementAsyncProcessor();
-appStateManager.addProcessor(incrementProcessor, decrementProcessor, incrementAsyncProcessor);
+appStateManager.addProcessor(incrementProcessor, incrementAsyncProcessor, decrementProcessor);
