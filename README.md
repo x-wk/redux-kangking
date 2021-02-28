@@ -53,7 +53,7 @@ import {appStateReducer} from 'redux-kangking';
 /**
  * import {createReducer, ReduxStateProcessor} from 'redux-kangking';
  *
- * // you can create other reducers like this:
+ * // You can use 'appStateReducer' or create a new one like this:
  * const otherStateManager = new ReduxStateProcessor.AppStateManager<AppState>();
  * const otherStateReducer = createReducer(appStateManager);
  */
@@ -84,11 +84,6 @@ abstract class CounterProcessor extends ReduxStateProcessor<AppState, number> {
  * handle increment action
  */
 class IncrementProcessor extends CounterProcessor {
-   getActionName() {
-      // identifiable
-      return 'increment';
-   }
-
    // update state
    protected handleState(appState: AppState, prevState: number, actionData: number): void {
       appState.count = prevState + actionData;
@@ -117,7 +112,8 @@ export class IncrementAsyncProcessor extends IncrementProcessor {
    }
 }
 
-export const incrementProcessor = new IncrementProcessor();
+// identifiable actionType
+export const incrementProcessor = new IncrementProcessor("incrment");
 export const decrementProcessor = new DecrementProcessor();
 export const incrementAsyncProcessor = new IncrementAsyncProcessor();
 // necessary steps 

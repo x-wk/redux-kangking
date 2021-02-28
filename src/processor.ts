@@ -81,11 +81,12 @@ export abstract class ReduxStateProcessor<S, D, T = D> extends ReduxStateHandler
    private readonly _initOrder: number;
    private readonly _actionName: string;
    private _next: ReduxStateProcessor<S, any> | null = null;
+   private _actionCreator = (actionData: T) => ({type: this._actionName, actionData});
 
-   constructor() {
+   constructor(actionName?: string) {
       super();
       this._initOrder = ReduxStateProcessor._cnt++;
-      this._actionName = this.getActionName() || `@@ACT#${padLeft(this._initOrder)}`;
+      this._actionName = actionName || `@@ACT#${padLeft(this._initOrder)}`;
    }
 
    private set next(processor: ReduxStateProcessor<S, any>) {
@@ -93,25 +94,27 @@ export abstract class ReduxStateProcessor<S, D, T = D> extends ReduxStateHandler
    }
 
    /**
-    * 默认操作类型是一个随机字符串
-    * 子类覆盖此方法可以提供一个更有意义的名称
+    * 获取操作类型
+    * 如果想提供一个更有意义的名称请通过构造函数(constructor)第一个参数传递, 否则无效
     */
    getActionName(): string {
       return this._actionName;
    }
 
    /**
-    * 子类可覆盖, 如搭配 redux-thunk 时返回一个函数型 Action
+    * 尽量避免覆盖此方法
+    * 复杂应用可以搭配 redux-observable 或 redux-saga 使用
     */
    getActionCreator() {
-      return (actionData: T) => ({type: this.getActionName(), actionData});
+      return this._actionCreator;
    }
 
    /**
+    * 默认根据 actionName 是否相等来判断是否支持
     * 子类可覆盖, 实现更复杂的逻辑判断
     */
    protected isSupport(actionName: string): boolean {
-      return this.getActionName() === actionName;
+      return this._actionName === actionName;
    }
 
    process(appState: S, action: AnyAction): S {
