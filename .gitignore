@@ -1,6 +1,6 @@
 .idea
-esm
 lib
+lib-esm
 # Logs
 logs
 *.log
