@@ -1,27 +1,55 @@
-import {AnyAction, Reducer} from 'redux';
+import {Action, Reducer} from 'redux';
 
-export declare type CreateActionFunc<T> = (payload: T) => AnyAction;
-
-declare class ReduxStateProcessorManager<S> {
-   /**
-    * 添加处状态理器
-    */
-   addProcessor(...processors: Array<ReduxStateProcessor<S, any>>): void;
-
-   /**
-    * 返回第一个状态处理器
-    */
-   getProcessor(): ReduxStateProcessor<S, any>;
+export declare interface PayloadAction extends Action {
+   payload?: any
 }
 
-export declare class ReduxStateProcessor<S, D, T = D> {
+export declare type CreateActionFunc<T> = (payload: T) => PayloadAction;
+
+export declare class ReduxStateProcessorManager<S> {
+   /**
+    * 添加状态处理器
+    */
+   addProcessor(processor: ReduxStateProcessor<S, any>): void;
+
+   /**
+    * 调度处理器处理状态
+    * @param appState 应用状态
+    * @param action 操作
+    */
+   processState(appState: S, action: PayloadAction): S;
+}
+
+/**
+ * 处理器配置
+ */
+export declare interface ReduxStateProcessorConfiguration {
+   /**
+    * it's better to specify a constant actionName when 'exclusive' is false,
+    * because 'stateManager' judges uniqueness based on this name
+    */
+   actionName?: string;
+
+   /**
+    * if true, the processor returns immediately after 'handleState', otherwise it continues to execute other processors.
+    */
+   exclusive?: boolean;
+
+   /**
+    * if not specified(undefined), this processor will be added to into the default state manager(appStateManager)
+    * you can pass other state manager as needed
+    */
+   stateManager?: ReduxStateProcessorManager<any>;
+}
+
+export declare abstract class ReduxStateProcessor<S, D, T = D> {
    /**
     * 状态管理器, 用法:
     * const appStateManager = new ReduxStateProcessor.AppStateManager<your state type>();
     */
    static AppStateManager: new<S>() => ReduxStateProcessorManager<S>;
 
-   constructor(actionName?: string);
+   constructor(config?: ReduxStateProcessorConfiguration);
 
    /**
     * 获取操作类型
@@ -55,7 +83,7 @@ export declare class ReduxStateProcessor<S, D, T = D> {
     * 默认根据 actionName 是否相等来判断是否支持
     * 子类可覆盖, 实现更复杂的逻辑判断
     */
-   protected isSupport(appState: S, sliceState: D, action: AnyAction): boolean;
+   protected isSupport(appState: S, sliceState: D, action: PayloadAction): boolean;
 }
 
 /**

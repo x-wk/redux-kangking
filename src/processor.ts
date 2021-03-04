@@ -1,5 +1,5 @@
 import produce, {isDraft} from 'immer';
-import {AnyAction, Reducer} from 'redux';
+import {Action, Reducer} from 'redux';
 
 // 数字前导0
 function padLeft(num: number, size = 5): string {
@@ -10,8 +10,12 @@ function padLeft(num: number, size = 5): string {
    return _str.slice(_str.length - size);
 }
 
+export interface PayloadAction extends Action {
+   payload?: any
+}
+
 export interface CreateActionFunc<T> {
-   (payload: T): AnyAction;
+   (payload: T): PayloadAction;
 }
 
 interface ReduxActionCreator<T> {
@@ -47,14 +51,35 @@ abstract class ReduxStateHandler<S, D, T = any> {
 
 interface ReduxStateProcessorManager<S> {
    /**
-    * 添加处状态理器
+    * 添加状态处理器
     */
-   addProcessor(...processors: Array<ReduxStateProcessor<S, any>>): void;
+   addProcessor(processor: ReduxStateProcessor<S, any>): void;
 
    /**
-    * 返回第一个状态处理器
+    * 调度处理器处理状态
+    * @param appState 应用状态
+    * @param action 操作
     */
-   getProcessor(): ReduxStateProcessor<S, any>;
+   processState(appState: S, action: PayloadAction): S;
+}
+
+export interface ReduxStateProcessorConfiguration {
+   /**
+    * it's better to specify a constant actionName when 'exclusive' is false,
+    * because 'stateManager' judges uniqueness based on this name
+    */
+   actionName?: string;
+
+   /**
+    * if true, the processor returns immediately after 'handleState', otherwise it continues to execute other processors.
+    */
+   exclusive?: boolean;
+
+   /**
+    * if not specified(undefined), this processor will be added to into the default state manager(appStateManager)
+    * you can pass other state manager as needed
+    */
+   stateManager?: ReduxStateProcessorManager<any>;
 }
 
 /**
@@ -65,17 +90,30 @@ export abstract class ReduxStateProcessor<S, D, T = D> extends ReduxStateHandler
    private static _cnt = 0;
    private readonly _initOrder: number;
    private readonly _actionName: string;
-   private _next: ReduxStateProcessor<S, any> | null = null;
+   private readonly _exclusive: boolean;
    private _actionCreator = (payload: T) => ({type: this._actionName, payload});
 
-   constructor(actionName?: string) {
+   constructor(config?: ReduxStateProcessorConfiguration) {
       super();
+      // 初始化顺序
       this._initOrder = ReduxStateProcessor._cnt++;
-      this._actionName = actionName || `@@ACT#${padLeft(this._initOrder)}`;
-   }
 
-   private set next(processor: ReduxStateProcessor<S, any>) {
-      this._next = processor;
+      // 初始化关键属性
+      const {
+         actionName,
+         exclusive = true,
+         stateManager = appStateManager
+      } = config || {};
+
+      if (!(exclusive || actionName)) {
+         console.warn('the state processor is not exclusive, you should specify a \'actionName\' through the constructor,' +
+            ' otherwise it may cause duplicate processing in some cases!');
+      }
+      this._exclusive = exclusive;
+      this._actionName = actionName || `@@ACT#${padLeft(this._initOrder)}`;
+
+      // 添加到管理器
+      stateManager.addProcessor(this);
    }
 
    /**
@@ -94,76 +132,56 @@ export abstract class ReduxStateProcessor<S, D, T = D> extends ReduxStateHandler
       return this._actionCreator;
    }
 
+   private get exclusive(): boolean {
+      return this._exclusive;
+   }
+
    /**
     * 默认根据 actionName 是否相等来判断是否支持
     * 子类可覆盖, 实现更复杂的逻辑判断
     */
-   protected isSupport(appState: S, sliceState: D, action: AnyAction): boolean {
+   protected isSupport(appState: S, sliceState: D, action: PayloadAction): boolean {
       const {type} = action;
       return type === this._actionName;
    }
 
-   process(appState: S, action: AnyAction): S {
-      if (!isDraft(appState)) {
-         console.warn('the given state is not a draft object, this may cause the original state to be modified.' +
-            ' please use \'createReducer\' or create a mutable draft object as the state parameter!');
-      }
-
-      // 执行状态变更
-      const sliceState = this.getSliceState(appState);
-      if (this.isSupport(appState, sliceState, action)) {
-         this.handleState(appState, sliceState, action.payload);
-         return appState;
-      }
-
-      // 传递给下一个处理器
-      if (this._next) {
-         return this._next.process(appState, action);
-      }
-
-      // AppStateManager放在最后兜底
-      throw new Error('The AppStateManager must be placed last.');
-   }
-
-   /**
-    * APP状态管理器, 可以实例多个 Manager 实现处理器分组
-    */
-   static AppStateManager = class AppStateManager<S> extends ReduxStateProcessor<S, S> implements ReduxStateProcessorManager<S> {
-      private _first: ReduxStateProcessor<S, any> = this;
-      private _processors: Array<ReduxStateProcessor<S, any>> = [];
+   static AppStateManager = class AppStateManager<S> implements ReduxStateProcessorManager<S> {
+      private _parallelProcessors: Array<ReduxStateProcessor<S, any>> = [];
+      private _exclusiveProcessorMap = new Map<any, ReduxStateProcessor<S, any>>();
 
       /**
-       * 添加处理器(遗憾没有依赖注入...)
-       * @param processors
+       * 添加处理器
        */
-      addProcessor(...processors: Array<ReduxStateProcessor<S, any>>): void {
-         // actionName相同的去重
-         const actionNames = this._processors.map(p => p.getActionName());
-         const newProcessors = processors.filter(p => p && actionNames.indexOf(p.getActionName()) < 0);
-
-         // 构造链
-         if (newProcessors && newProcessors.length > 0) {
-            this._processors.push(...newProcessors);
-            newProcessors.forEach(p => {
-               p.next = this._first;
-               this._first = p;
-            });
+      addProcessor(processor: ReduxStateProcessor<S, any>): void {
+         if (processor.exclusive) {
+            this._exclusiveProcessorMap.set(processor.getActionName(), processor);
+         } else {
+            this._parallelProcessors = this._parallelProcessors.filter(p => p.getActionName() !== processor.getActionName()).concat(processor);
          }
       }
 
-      getProcessor(): ReduxStateProcessor<S, any> {
-         return this._first;
-      }
+      processState(appState: S, action: PayloadAction): S {
+         if (!isDraft(appState)) {
+            console.warn('the given state is not a draft object, this may cause the original state to be modified.' +
+               ' please use \'createReducer\' or create a mutable draft object as the state parameter!');
+         }
 
-      protected handleState(appState: S, prevState: any, payload: any): void {
-         // do nothing
-      }
+         const {type, payload} = action;
+         for (let p of this._parallelProcessors) {
+            const sliceState = p.getSliceState(appState);
+            if (p.isSupport(appState, sliceState, action)) {
+               p.handleState(appState, sliceState, payload);
+            }
+         }
 
-      getSliceState(appState: S) {
-         return appState;
-      }
+         const processor = this._exclusiveProcessorMap.get(type);
+         if (processor) {
+            const sliceState = processor.getSliceState(appState);
+            if (processor.isSupport(appState, sliceState, action)) {
+               processor.handleState(appState, sliceState, payload);
+            }
+         }
 
-      process(appState: S, action: AnyAction): S {
          return appState;
       }
    };
@@ -171,9 +189,9 @@ export abstract class ReduxStateProcessor<S, D, T = D> extends ReduxStateHandler
 
 // 用于创建reducer
 export function createReducer<S>(stateManager: ReduxStateProcessorManager<S>): Reducer<S> {
-   return (appState: S = {} as any, action: AnyAction) => {
+   return (appState: S = {} as any, action: PayloadAction) => {
       return produce(appState, (draftState: S) => {
-         stateManager.getProcessor().process(draftState, action);
+         stateManager.processState(draftState, action);
       });
    };
 }
