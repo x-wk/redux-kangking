@@ -1,6 +1,6 @@
 {
    "name": "redux-kangking",
-   "version": "0.9.1",
+   "version": "0.10.1",
    "description": "Make Redux development easier",
    "main": "lib/index.js",
    "module": "lib-esm/index.js",

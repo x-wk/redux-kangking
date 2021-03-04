@@ -11,11 +11,11 @@
 ## Conception
 
 1. state processor
+   - provide actionCreator
    - handle slice state change
 2. state manager
    - hold all processors
    - initialize the execution chain
-   - re-establish execution chain at the right time (coming soon)
 
 ## Installation
 
@@ -70,7 +70,7 @@ import {appStateManager, ReduxStateProcessor} from 'redux-kangking';
 import AppState from '../../redux/state';
 
 /**
- * IncrementProcessor 和 DecrementProcessor 共用一块状态(shared slice state), 所以这里提取一个父类
+ * IncrementProcessor 和 DecrementProcessor 共用一块状态(same slice state), 所以这里提取一个父类
  * 如果有其它 'increment' 操作也可以继承 IncrementProcessor 实现逻辑复用, 如: IncrementAsyncProcessor
  * 如果搭配 redux-observable 或 redux-saga 甚至不需要修改 getActionCreator
  */
@@ -113,11 +113,9 @@ export class IncrementAsyncProcessor extends IncrementProcessor {
 }
 
 // identifiable actionType
-export const incrementProcessor = new IncrementProcessor("incrment");
+export const incrementProcessor = new IncrementProcessor({actionName: 'increment', exclusive: true});
 export const decrementProcessor = new DecrementProcessor();
 export const incrementAsyncProcessor = new IncrementAsyncProcessor();
-// necessary steps 
-appStateManager.addProcessor(incrementProcessor, decrementProcessor, incrementAsyncProcessor);
 ```
 
 **use processor**

@@ -7,3 +7,4 @@ examples
 npm-debug.log
 tsconfig.json
 tsconfig.esm.json
+package-lock.json
