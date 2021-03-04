@@ -1,4 +1,4 @@
-import {appStateManager, ReduxStateProcessor} from 'redux-kangking';
+import {ReduxStateProcessor} from 'redux-kangking';
 import AppState, {Task} from '../../redux/state';
 import {nanoid} from 'nanoid';
 
@@ -43,4 +43,3 @@ export class CompleteTask extends TaskProcessor {
 
 export const addTask = new AddTask();
 export const completeTask = new CompleteTask();
-appStateManager.addProcessor(addTask, completeTask);

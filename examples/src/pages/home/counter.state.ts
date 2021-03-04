@@ -1,5 +1,5 @@
 import {Dispatch} from 'redux';
-import {appStateManager, ReduxStateProcessor} from 'redux-kangking';
+import {ReduxStateProcessor} from 'redux-kangking';
 import AppState from '../../redux/state';
 
 /**
@@ -38,7 +38,6 @@ export class IncrementAsyncProcessor extends IncrementProcessor {
 }
 
 // 可以提供一个更有意义的actionType, 否则随机生成一个
-export const incrementProcessor = new IncrementProcessor("increment");
+export const incrementProcessor = new IncrementProcessor({actionName: 'increment', exclusive: true});
 export const decrementProcessor = new DecrementProcessor();
 export const incrementAsyncProcessor = new IncrementAsyncProcessor();
-appStateManager.addProcessor(incrementProcessor, incrementAsyncProcessor, decrementProcessor);
