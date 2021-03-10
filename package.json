@@ -2,15 +2,17 @@
    "name": "redux-kangking",
    "version": "0.10.1",
    "description": "Make Redux development easier",
-   "main": "lib/index.js",
-   "module": "lib-esm/index.js",
+   "main": "./index.js",
+   "module": "./esm/index.js",
    "typings": "./index.d.ts",
    "repository": "https://github.com/x-wk/redux-kangking",
    "homepage": "https://github.com/x-wk/redux-kangking",
    "scripts": {
-      "clean": "rimraf lib lib-esm",
-      "build": "npm run clean && tsc && tsc -p tsconfig.esm.json",
-      "test": "echo \"Error: no test specified\" && exit 1"
+      "clean": "rimraf lib",
+      "dev": "npm-run-all clean package \"compile -- -w\"",
+      "compile": "tsc -b ./tsconfig.json ./tsconfig.esm.json",
+      "build": "npm-run-all clean compile package",
+      "package": "node ./tools/copy-files.js && node ./tools/generate-alias.js"
    },
    "keywords": [
       "react",
@@ -29,10 +31,15 @@
    "author": "Kang King <whtsir@gmail.com>",
    "license": "MIT",
    "devDependencies": {
+      "@types/node": "^14.14.33",
       "@types/redux": "^3.6.0",
+      "fs-extra": "^9.1.0",
       "immer": "^8.0.1",
+      "npm-run-all": "^4.1.5",
       "redux": "^4.0.5",
       "rimraf": "^3.0.2",
+      "rxjs": "^6.6.6",
+      "shx": "^0.3.3",
       "typescript": "^4.2.2"
    },
    "peerDependencies": {
