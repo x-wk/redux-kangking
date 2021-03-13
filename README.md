@@ -6,7 +6,7 @@
 - Achieve lazy loading without special settings.
 - Accurately update the state, and each action will not be handled by all processors.
 - Automatically uses the [`immer` library](https://github.com/immerjs/immer) to let you write simpler immutable updates
-  with normal mutative code, like appState.tasks[1].completed = true.
+  with normal mutative code, like `appState.tasks[1].completed = true`.
 - Sharing slice state without special settings.
 - (Optional) Rxjs-based middleware, easier to manage asynchronous side effects, and also supports lazy loading (no root,
   no combine).
