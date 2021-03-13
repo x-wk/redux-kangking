@@ -4,7 +4,7 @@ import {map, mergeMap, observeOn, subscribeOn, takeUntil} from 'rxjs/operators';
 import {PayloadAction} from '../state-processor';
 import {observerManager, ReduxStateObserverManager} from './state-observer';
 
-export function createKangKingMiddleware<S>(manager: ReduxStateObserverManager<S> = observerManager): Middleware<{}, S, Dispatch<any>> {
+export function createObservableMiddleware<S>(manager: ReduxStateObserverManager<S> = observerManager): Middleware<{}, S, Dispatch<any>> {
 
    let store: MiddlewareAPI<Dispatch<any>, S>;
 
@@ -39,6 +39,7 @@ export function createKangKingMiddleware<S>(manager: ReduxStateObserverManager<S
                );
             }
 
+            // todo error handling
             return payload$.pipe(
                map(observer.getActionCreator()),
                takeUntil(terminator),

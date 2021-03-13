@@ -1,29 +1,49 @@
+import {applyMixins} from './utils';
 import {PayloadAction, ReduxStateProcessor, ReduxStateProcessorConfiguration} from './state-processor';
 
-export type ProcessorOptions<S, D, T = D> = ReduxStateProcessorConfiguration<S, D, T> & {
-   handleState?: (appState: S, prevState: D, payload: T) => void;
-   isSupport?: (appState: S, sliceState: D, action: PayloadAction<T>) => boolean;
+export type SliceResolver<S, D> = (appState: S) => D;
+
+export type SliceCreatorClass = { new(sliceResolver: SliceResolver<any, any>): BaseSliceCreator };
+
+export class BaseSliceCreator {
+   readonly getProcessors: () => Array<ReduxStateProcessor<any, any>>;
+   readonly getLatest: (len: number) => ReduxStateProcessor<any, any>[];
+   protected readonly registerProcessor: (processor: ReduxStateProcessor<any, any>) => void;
+
+   constructor(protected sliceResolver: SliceResolver<any, any>) {
+      const processors: Array<ReduxStateProcessor<any, any>> = [];
+      this.registerProcessor = (processor: ReduxStateProcessor<any, any>) => {
+         processors.push(processor);
+      };
+
+      this.getProcessors = () => {
+         return processors;
+      };
+
+      this.getLatest = (len: number) => {
+         return processors.slice(-1 * len);
+      };
+   }
 }
 
-export type SliceStateResolver<S, D> = (appState: S) => D;
+export type SliceProcessorOptions<AT, ST, PT> = ReduxStateProcessorConfiguration<AT, ST, PT> & {
+   handleState?: (appState: AT, prevState: ST, payload: PT) => void;
+   isSupport?: (appState: AT, sliceState: ST, action: PayloadAction<PT>) => boolean;
+}
 
-export function createSlice<S, D, T = D>(resolver: SliceStateResolver<S, D>) {
-   if (!resolver || typeof resolver !== 'function') {
-      throw new TypeError('必须指定一个函数');
-   }
-
-   const sliceStateResolver = resolver;
-   const processors: Array<ReduxStateProcessor<S, D, T>> = [];
-
-   return {
-      addProcessor(options?: ProcessorOptions<S, D, T>) {
-         const {isSupport, handleState, ...configs} = options || {};
-         const InnerProcessor = class extends ReduxStateProcessor<S, D, T> {
-            getSliceState(appState: S): D {
+export class DefaultSliceCreator extends BaseSliceCreator {
+   addProcessor<AT, ST, PT>(processor?: SliceProcessorOptions<AT, ST, PT> | ReduxStateProcessor<AT, ST, PT>) {
+      if (processor && processor instanceof ReduxStateProcessor) {
+         this.registerProcessor(processor);
+      } else {
+         const sliceStateResolver = this.sliceResolver;
+         const {isSupport, handleState, ...configs} = processor || {};
+         const InnerStateProcessor = class extends ReduxStateProcessor<AT, ST, PT> {
+            getSliceState(appState: AT): ST {
                return sliceStateResolver(appState);
             }
 
-            protected isSupport(appState: S, sliceState: D, action: PayloadAction<T>): boolean {
+            protected isSupport(appState: AT, sliceState: ST, action: PayloadAction<PT>): boolean {
                if (isSupport) {
                   // todo this绑定问题
                   return isSupport.call(this, appState, sliceState, action);
@@ -31,16 +51,32 @@ export function createSlice<S, D, T = D>(resolver: SliceStateResolver<S, D>) {
                return super.isSupport(appState, sliceState, action);
             }
 
-            protected handleState(appState: S, prevState: D, payload: T): void {
+            protected handleState(appState: AT, prevState: ST, payload: PT): void {
                handleState && handleState(appState, prevState, payload);
             }
          };
 
-         processors.push(new InnerProcessor(configs));
-         return this;
-      },
-      getProcessors() {
-         return processors;
+         this.registerProcessor(new InnerStateProcessor(configs));
       }
+      return this;
+   }
+}
+
+// todo 根据参数动态识别返回类型应该怎么写??
+export function createSliceCreator<Ext extends DefaultSliceCreator = DefaultSliceCreator>(...extCtors: SliceCreatorClass[]):
+   { <S, D>(r: SliceResolver<S, D>): Ext } {
+   return <S, D>(resolver: SliceResolver<S, D>) => {
+      if (typeof resolver !== 'function') {
+         // 必须指定一个函数
+         throw new TypeError('Expected the resolver to be a function.');
+      }
+
+      class SmartSliceCreator extends DefaultSliceCreator {
+      }
+
+      // 将扩展类混入
+      applyMixins(SmartSliceCreator, extCtors);
+
+      return new SmartSliceCreator(resolver) as Ext;
    };
 }

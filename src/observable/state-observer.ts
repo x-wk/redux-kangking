@@ -31,6 +31,7 @@ export abstract class ReduxStateObserver<S, D, T = D> extends ReduxStateProcesso
 
    constructor(config: ReduxStateObserverConfiguration<S, D, T>) {
       if (!config.actionName) {
+         // 必须指定一个固定且唯一的名称, 避免某些场景中出现重复订阅
          throw new TypeError(
             `You must specify a UNIQUE 'actionName' through the constructor,
              otherwise it may cause duplicate subscription in some cases!`
@@ -43,7 +44,7 @@ export abstract class ReduxStateObserver<S, D, T = D> extends ReduxStateProcesso
       (config.observerManager || observerManager).addObserver(this);
    }
 
-   abstract observe(action$: Observable<PayloadAction<T>>, appState$: Observable<S>): Observable<T>;
+   abstract observe(action$: Observable<PayloadAction>, appState$: Observable<S>): Observable<T>;
 }
 
 // app default observerManager
