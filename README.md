@@ -270,7 +270,7 @@ export {incrementProcessor, decrementProcessor, incrementAsyncProcessor};
 
 just a general container component
 
-[More Examples](https://github.com/x-wk/redux-kangking/tree/main/examples)
+[More Examples](https://github.com/x-wk/redux-kangking-examples)
 
 ***Less is More, haha😊***
 
