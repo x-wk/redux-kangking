@@ -2,7 +2,7 @@ const path = require('path');
 const fs = require('fs-extra');
 
 const files = [
-   'package.json', 'index.d.ts', 'README.md', 'LICENSE.md'
+   'package.json', 'README.md', 'LICENSE.md'
 ];
 
 try {

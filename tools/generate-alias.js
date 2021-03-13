@@ -18,7 +18,7 @@ aliasRoot.map((alias) => path.resolve(__dirname, `../lib/${alias}`)).forEach((al
 aliasRoot.forEach((alias) => {
    const pkgManifest = {
       'name': `redux-kangking/${alias}`,
-      'types': `../index.d.ts`,
+      'types': `./index.d.ts`,
       'main': `./index.js`,
       'module': `../esm/${alias}/index.js`,
       'sideEffects': false
