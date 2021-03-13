@@ -219,7 +219,7 @@ const [incrementAsyncProcessor, decrementProcessor, incrementProcessor] =
          // 监听并响应感兴趣的 Action , 返回值(流)会触发新的Action以改变自身的状态
          observe(action$: Observable<PayloadAction<number>>, state$: Observable<AppState>): Observable<number> {
             return action$.pipe(
-               filter(({type}) => type === incrementAsync.actionName || type === decrement.actionName),
+               filter(({type}) => type === incrementAsyncProcessor.actionName || type === decrementProcessor.actionName),
                mergeMap(({type, payload}) => {
                   if (type === decrement.actionName) {
                      // 减法
